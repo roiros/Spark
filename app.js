@@ -11,6 +11,7 @@ var fileUpload = require('express-fileupload');
 var log = require('./libs/logger')(module);
 var recaptcha = require('express-recaptcha');
 var compileSass = require('express-compile-sass');
+var proxy = require('express-http-proxy');
 var recaptchaConfig = require('config').get('recaptcha');
 var KnexSessionStore = require('connect-session-knex')(session);
 var knex = require('./libs/db').knex;
@@ -25,29 +26,29 @@ app.use(favicon(path.join(__dirname, '/public/favicon.ico')));
 
 // Log every HTTP request
 app.use(morganLogger('dev', {
-    stream: log.logger.stream({
-        level: 'info',
-        filter: function(message) {
-            if ((typeof message === "undefined") || (message === null)) return true;
-            return !
-                (message.includes('/stylesheets/') || message.includes('/images/'));
-        }
-    })
+  stream: log.logger.stream({
+    level: 'info',
+    filter: function(message) {
+      if ((typeof message === "undefined") || (message === null)) return true;
+      return !
+      (message.includes('/stylesheets/') || message.includes('/images/'));
+    }
+  })
 }));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
-    extended: false
+  extended: false
 }));
 app.use(cookieParser());
 
 var root = process.cwd();
 app.use(compileSass({
-    root: root + '/public',
-    sourceMap: true, // Includes Base64 encoded source maps in output css
-    sourceComments: true, // Includes source comments in output css
-    watchFiles: true, // Watches sass files and updates mtime on main files for each change
-    logToConsole: false // If true, will log to console.error on errors
+  root: root + '/public',
+  sourceMap: true, // Includes Base64 encoded source maps in output css
+  sourceComments: true, // Includes source comments in output css
+  watchFiles: true, // Watches sass files and updates mtime on main files for each change
+  logToConsole: false // If true, will log to console.error on errors
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/bower_components', express.static(path.join(__dirname, '/bower_components')));
@@ -55,9 +56,9 @@ app.use('/bower_components', express.static(path.join(__dirname, '/bower_compone
 app.use('/bower_components', express.static(path.join(__dirname, '/bower_components')));
 
 app.use(function(req, res, next) {
-    res.locals.req = req;
-    res.locals.path = req.path.split('/');
-    next();
+  res.locals.req = req;
+  res.locals.path = req.path.split('/');
+  next();
 });
 
 // Passport setup
@@ -65,14 +66,14 @@ require('./libs/passport')(passport);
 
 // using session storage in DB - allows multiple server instances + cross session support between node js apps
 var sessionStore = new KnexSessionStore({
-    knex: knex
+  knex: knex
 });
 app.use(session({
-    secret: 'SparklePoniesAreFlyingOnEsplanade',
-    resave: false,
-    saveUninitialized: false,
-    maxAge: 1000 * 60 * 30,
-    store: sessionStore
+  secret: 'SparklePoniesAreFlyingOnEsplanade',
+  resave: false,
+  saveUninitialized: false,
+  maxAge: 1000 * 60 * 30,
+  store: sessionStore
 }));
 app.use(passport.initialize());
 app.use(passport.session()); // persistent login sessions
@@ -83,55 +84,55 @@ var i18next = require('i18next');
 var middleware = require('i18next-express-middleware');
 var backend = require('i18next-node-fs-backend');
 i18next
-    .use(middleware.LanguageDetector)
-    .use(backend)
-    .init({
-        whitelist: ['en', 'he'],
-        fallbackLng: 'en',
-        load: 'languageOnly',
-        debug: false,
-        //namespaces
-        ns: ['common', 'camps'],
-        defaultNS: 'common',
-        fallbackNS: 'common',
+.use(middleware.LanguageDetector)
+.use(backend)
+.init({
+  whitelist: ['en', 'he'],
+  fallbackLng: 'en',
+  load: 'languageOnly',
+  debug: false,
+  //namespaces
+  ns: ['common', 'camps'],
+  defaultNS: 'common',
+  fallbackNS: 'common',
 
-        backend: {
-            // path where resources get loaded from
-            loadPath: 'locales/{{lng}}/{{ns}}.json',
+  backend: {
+    // path where resources get loaded from
+    loadPath: 'locales/{{lng}}/{{ns}}.json',
 
-            // path to post missing resources
-            addPath: 'locales/{{lng}}.missing.json',
+    // path to post missing resources
+    addPath: 'locales/{{lng}}.missing.json',
 
-            // jsonIndent to use when storing json files
-            jsonIndent: 2
-        },
-        detection: {
-            // order and from where user language should be detected
-            order: ['path', 'session', 'querystring', 'cookie', 'header'],
+    // jsonIndent to use when storing json files
+    jsonIndent: 2
+  },
+  detection: {
+    // order and from where user language should be detected
+    order: ['path', 'session', 'querystring', 'cookie', 'header'],
 
-            // keys or params to lookup language from
-            lookupQuerystring: 'lng',
-            lookupCookie: 'i18next',
-            lookupSession: 'lng',
-            //lookupPath: 'lng',
-            lookupFromPathIndex: 0
+    // keys or params to lookup language from
+    lookupQuerystring: 'lng',
+    lookupCookie: 'i18next',
+    lookupSession: 'lng',
+    //lookupPath: 'lng',
+    lookupFromPathIndex: 0
 
-            // cache user language
-            //caches: true // ['cookie']
+    // cache user language
+    //caches: true // ['cookie']
 
-            // optional expire and domain for set cookie
-            //cookieExpirationDate: new Date(),
-            //cookieDomain: 'SparkMidburn'
-        }
-    }, function() {
-        middleware.addRoute(i18next, '/:lng', ['en', 'he'], app, 'get', function(req, res) {
-            //endpoint function
-            log.info("ROUTE");
-        });
-    });
+    // optional expire and domain for set cookie
+    //cookieExpirationDate: new Date(),
+    //cookieDomain: 'SparkMidburn'
+  }
+}, function() {
+  middleware.addRoute(i18next, '/:lng', ['en', 'he'], app, 'get', function(req, res) {
+    //endpoint function
+    log.info("ROUTE");
+  });
+});
 app.use(middleware.handle(i18next, {
-    ignoreRoutes: ['images/', 'images', 'images/', '/images/', 'stylesheets', '/favicon.ico'],
-    removeLngFromUrl: false
+  ignoreRoutes: ['images/', 'images', 'images/', '/images/', 'stylesheets', '/favicon.ico'],
+  removeLngFromUrl: false
 }));
 //i18next.addRoute('/:lng', ['en', 'de'], app, 'get', function(req, res) {
 //    log.info('SEO friendly route ...');
@@ -148,7 +149,7 @@ app.use(userRole.middleware());
 
 // Infrastructure Routes
 if (app.get('env') === 'development') {
-    app.use('/dev', require('./routes/dev_routes'));
+  app.use('/dev', require('./routes/dev_routes'));
 }
 require('./routes/main_routes.js')(app, passport);
 
@@ -174,74 +175,123 @@ recaptcha.init(recaptchaConfig.sitekey, recaptchaConfig.secretkey);
 
 log.info('Spark environment: NODE_ENV =', process.env.NODE_ENV, ', app.env =', app.get('env'));
 
+//allow proxing sub modules
+var services = [];
+var servicesArr=undefined;//sorted services array
+var servicesArrRet=undefined;//cleaned services array for returning
+app.post('/register', function (req, res) {
+  //TODO sanitize input - espacially port and path
+  var entry={
+    port : req.body.port,
+    path : req.body.path,
+    name : req.body.name,
+    ordering: (req.body.ordering===undefined)? 100:req.body.ordering
+  }
+  let path='/multi/'+entry.path;
+
+  app.use(path, proxy('http://127.0.0.1:' + entry.port));
+  services[path]=entry;
+
+  servicesArr=undefined;//reset the cached result
+  servicesArrRet=undefined;
+  log.info('registered ' +entry.name +'at ' + path
+  + ' redirect to: ' + entry.port);
+
+  res.send('registered');
+
+});
+
+app.get('/register', (req, res) => {
+  if (servicesArr===undefined){
+    servicesArr=Object.values(services);
+    servicesArr.sort(function (a,b) {return a.ordering-b.ordering});
+    servicesArrRet=servicesArr.map((service)=>{return {name:service.name, path:service.path}})
+  }
+
+  res.send(servicesArrRet);
+})
+
+// end module proxies
+
+
 // ==============
 // Error handlers
 // ==============
 
 // Catch 404 and forward to error handler
+//TODO URGENT!! resolve! error handling doesn't work with proxying
 app.use(function(req, res, next) {
+  //log.warn(JSON.stringify(req.headers));
+  let findRes=Object.keys(services).find((elem)=>{
+    return elem===req.url})
+    if (findRes!=undefined)
+      {
+        next();
+        return;
+      }
     var err = new Error('Not Found: ' + req.url);
     err.status = 404;
     next(err);
-});
+  });
 
-// Development error handler - will print stacktrace
-if (app.get('env') === 'development') {
+  // Development error handler - will print stacktrace
+  if (app.get('env') === 'development') {
 
     app.use(function(err, req, res, next) {
-        // Handle CSRF token errors
-        if (err.code === 'EBADCSRFTOKEN') {
-            res.status(403);
-            res.render('pages/error', {
-                errorMessage: 'Illegal action. Your connection details has been logged.',
-                error: {
-                    status: 'URL: ' + req.url
-                }
-            });
-            return;
-        }
-        res.status(err.status || 500);
+      // Handle CSRF token errors
+      if (err.code === 'EBADCSRFTOKEN') {
+        res.status(403);
         res.render('pages/error', {
-            errorMessage: err.message,
-            error: err
+          errorMessage: 'Illegal action. Your connection details has been logged.',
+          error: {
+            status: 'URL: ' + req.url
+          }
         });
+        return;
+      }
+      res.status(err.status || 500);
+      res.render('pages/error', {
+        errorMessage: err.message,
+        error: err
+      });
     });
-}
-// Production error handler - no stacktraces leaked to user
-else {
+  }
+  // Production error handler - no stacktraces leaked to user
+  else {
     app.use(function(err, req, res, next) {
-        // Handle CSRF token errors
-        if (err.code === 'EBADCSRFTOKEN') {
-            res.status(403);
-            res.render('pages/error', {
-                errorMessage: 'Illegal action. Your connection details has been logged.',
-                error: req.url
-            });
-            return;
-        }
-        res.status(err.status || 500);
+      // Handle CSRF token errors
+      if (err.code === 'EBADCSRFTOKEN') {
+        res.status(403);
         res.render('pages/error', {
-            errorMessage: err.message,
-            error: {}
+          errorMessage: 'Illegal action. Your connection details has been logged.',
+          error: req.url
         });
+        return;
+      }
+      res.status(err.status || 500);
+      res.render('pages/error', {
+        errorMessage: err.message,
+        error: {}
+      });
     });
-}
+  }
 
-// Handler for unhandled rejections
-process.on('unhandledRejection', function(reason, p) {
+  // Handler for unhandled rejections
+  process.on('unhandledRejection', function(reason, p) {
     log.error("Possibly Unhandled Rejection at: Promise ", p, " reason: ", reason);
-});
+  });
 
-process.on('warning', function(warning) {
+  process.on('warning', function(warning) {
     log.warn(warning.name); // Print the warning name
     log.warn(warning.message); // Print the warning message
     log.warn(warning.stack); // Print the stack trace
-});
+  });
 
-// Allow file uploads
-app.use(fileUpload());
+  // Allow file uploads
+  app.use(fileUpload());
 
-// == Export our app ==
-module.exports = app;
 
-log.info("--- Spark is running :) ---");
+  // == Export our app ==
+  module.exports = app;
+
+  log.info("--- Spark is running :) ---");
